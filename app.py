@@ -1,3 +1,4 @@
+
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -7,7 +8,7 @@ from googletrans import Translator
 
 # Set up the API Key
 st.title("Jewelry Details Using Multiple Images")
-api_key = "AIzaSyApVuZcpL0CMmuiRhogQ4fKjHtMlYz18V4"  # Replace with your actual API key
+api_key = "AIzaSyCL58cPfQpngW5kwDIrvqV6e4VaHkcDBBk"  # Replace with your actual API key
 
 if api_key:
     genai.configure(api_key=api_key)
@@ -37,10 +38,8 @@ if api_key:
 
     # Function to format response using regular expressions
     def format_response(response):
-        # Define a regex pattern to capture key-value pairs
-        pattern = re.compile(r"(Metal Type|Type of Jewelry|Karat|Weight|Hallmark|Design Style|Setting|Pattern|Color|Gemstone|Type of Gemstone|Shape|Cut|Clarity|Carat):\s*(.*?)(?=\b(?:Metal Type|Type of Jewelry|Karat|Weight|Hallmark|Design Style|Setting|Pattern|Color|Gemstone|Type of Gemstone|Shape|Cut|Clarity|Carat|$))", re.DOTALL)
-        
-        # Use regex to find all key-value matches and format them line by line
+        pattern = re.compile(r"(Metal Type|Type of Jewelry|Karat|Weight|Hallmark|Design Style|Setting|Pattern|Color|Gemstone|Type of Gemstone|Shape|Cut|Clarity|Carat|Metal Finish|Center Stone|Side Stone|Clasp|Strands|Length|Back Type|Meta Title|Meta Keywords):\s*(.*?)(?=\b(?:Metal Type|Type of Jewelry|Karat|Weight|Hallmark|Design Style|Setting|Pattern|Color|Gemstone|Type of Gemstone|Shape|Cut|Clarity|Carat|Metal Finish|Center Stone|Side Stone|Clasp|Strands|Length|Back Type|Meta Title|Meta Keywords|$))", re.DOTALL)
+
         details = {}
         for match in pattern.finditer(response):
             key = match.group(1).strip()
@@ -51,7 +50,6 @@ if api_key:
 
     st.write("## Upload up to 5 Images of the Same Jewelry")
 
-    # Allow multiple file uploads (up to 5)
     uploaded_files = st.file_uploader("Choose up to 5 images (e.g., jewelry)", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="multi_file")
     if uploaded_files:
         if len(uploaded_files) > 5:
@@ -62,7 +60,6 @@ if api_key:
                 img = Image.open(uploaded_file)
                 st.image(img, caption=uploaded_file.name, use_column_width=True)
 
-            # Upload to Gemini API
             st.write("Uploading the images to Gemini API...")
             sample_files = []
             for uploaded_file in uploaded_files:
@@ -70,7 +67,6 @@ if api_key:
                 sample_files.append(sample_file)
                 st.write(f"Uploaded file URI: {sample_file.uri}")
 
-            # Wait for all files to be ready
             files_ready = []
             for sample_file in sample_files:
                 file = check_file_status(sample_file.name)
@@ -79,46 +75,50 @@ if api_key:
                     files_ready.append(file)
 
             if len(files_ready) == len(uploaded_files):
-                # Prompt to analyze the uploaded images
                 prompt = (
                     "Analyze the images to determine if they represent a jewelry item. "
                     "If not, respond with 'Sorry, this is not a jewelry item.' "
                     "If it is a jewelry item, provide the details in this structured format, and omit points if not visible:\n\n"
                     "Jewelry Analysis\n"
                     "Metal Type: (e.g., Yellow Gold)\n"
+                    "Metal Finish: (e.g., Matte, Glossy, Textured)\n"
                     "Type of Jewelry: (e.g., Necklace, Earrings, Bracelet, Bangles, etc)\n"
+                    "Center Stone: (e.g., Diamond, Emerald, etc.)\n"
+                    "Side Stone: (e.g., Ruby, Sapphire, etc.)\n"
                     "Karat: (if visible)\n"
                     "Weight: (if visible)\n"
                     "Hallmark: (if visible)\n"
                     "Design Style: (e.g., Floral and Circular)\n"
                     "Setting: (e.g., Bezel setting)\n"
                     "Pattern: (e.g., Floral motifs)\n"
-                    "Color: (e.g., Yellow Gold)\n\n"
-                    "If the jewelry includes a gemstone, provide details as follows. If no gemstone, state 'No gemstone in this jewelry':\n"
-                    "Gemstone: (e.g., Pearl)\n"
-                    "Type of Gemstone: (e.g., Cultured Pearl)\n"
-                    "Shape: (e.g., Round)\n"
-                    "Cut: (if applicable)\n"
-                    "Clarity: (if applicable)\n"
-                    "Color: (e.g., White)\n"
-                    "Carat: (if visible)"
+                    "Color: (e.g., Yellow Gold)\n"
+                    "Length: (for necklaces)\n"
+                    "Clasp: (for necklaces)\n"
+                    "Strands: (for necklaces, if visible)\n"
+                    "Back Type: (for earrings, e.g., Push Back, Screw Back)\n"
+                    "Meta Title: Generate an SEO-friendly title for the jewelry item.\n"
+                    "Meta Keywords: Generate relevant keywords for the jewelry item.\n"
                 )
 
                 if st.button("Analyze Images"):
-                    st.write("### Combined Analysis Result")
                     combined_response = ""
                     for file in files_ready:
                         combined_response += analyze_content([file], prompt) + "\n"
 
                     formatted_details = format_response(combined_response)
 
-                    # Display English Results
-                    st.write("#### English Results")
-                    for key, value in formatted_details.items():
-                        st.write(f"{key}: {value}")
+                    tabs = st.tabs(["English", "Japanese"])
 
-                    # Translate to Japanese
-                    st.write("#### Japanese Translation")
-                    translated_details = {key: translator.translate(value, src="en", dest="ja").text for key, value in formatted_details.items()}
-                    for key, value in translated_details.items():
-                        st.write(f"{key}: {value}")
+                    # English Tab
+                    with tabs[0]:
+                        st.write("#### English Results")
+                        for key, value in formatted_details.items():
+                            st.write(f"{key}: {value}")
+
+                    # Japanese Tab
+                    with tabs[1]:
+                        st.write("#### Japanese Translation")
+                        translated_details = {key: translator.translate(value, src="en", dest="ja").text for key, value in formatted_details.items()}
+                        for key, value in translated_details.items():
+                            st.write(f"{key}: {value}")
+
